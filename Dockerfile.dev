@@ -1,0 +1,29 @@
+FROM python:3.12 AS builder
+
+ENV PYHTONUNBUFFERED=1
+
+EXPOSE 80
+
+WORKDIR /code
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+COPY ./.python-version ./.python-version
+
+COPY ./pyproject.toml ./pyproject.toml
+
+COPY ./uv.lock ./uv.lock
+
+RUN uv sync --frozen --no-cache
+
+COPY ./Makefile /code/Makefile
+
+COPY ./logging /code/logging
+
+COPY ./alembic /code/alembic
+
+COPY ./alembic.ini /code/alembic.ini
+
+COPY ./src /code/src
+
+CMD ["make", "run-dev"]

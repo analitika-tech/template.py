@@ -1,0 +1,29 @@
+services:
+  api:
+    container_name: voney.ml
+    build:
+      context: ../../
+      dockerfile: Dockerfile.debug
+    env_file: ../../.docker.env
+    ports:
+      - 8000:80
+    volumes:
+      - ../../:/code/
+
+  db:
+    container_name: db
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: admin
+      POSTGRES_DB: ApplicationDb
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes: 
+  postgres_data:
+    driver: local
+

@@ -1,0 +1,21 @@
+FROM python:3.12
+
+EXPOSE 8000
+
+ENV PYHTONUNBUFFERED=1
+
+WORKDIR /code
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+COPY ./.python-version ./.python-version
+
+COPY ./pyproject.toml ./pyproject.toml
+
+COPY ./uv.lock ./uv.lock
+
+RUN uv sync 
+
+COPY . .
+
+CMD ["make", "run-debug"]
