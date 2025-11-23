@@ -49,19 +49,3 @@ async def send(settings: Settings, content: str, to: str, subject: str) -> None:
     finally:
         logger.info("[EMAIL]: Quitting SMTP session")
         await asyncio.to_thread(smtp.quit)
-    """
-    logger.info("[EMAIL]: Email message setups complete")
-    with smtplib.SMTP_SSL(
-        host=settings.email_settings.server, port=settings.email_settings.port
-    ) as smtp:
-        logger.info("[EMAIL]: Loging in to SMTP server")
-        await asyncio.to_thread(
-            smtp.login, settings.email_settings.sender, settings.email_settings.password
-        )
-
-        logger.info("[EMAIL]: Sending email to recipient")
-        await asyncio.to_thread(smtp.send_message, message)
-
-        logger.info("[EMAIL]: Dispose SMTP handler")
-        await asyncio.to_thread(smtp.quit)
-        """

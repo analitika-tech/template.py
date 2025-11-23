@@ -1,7 +1,7 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Union
-from uuid import UUID
 
 from fastapi import Response
 from pydantic import BaseModel
@@ -50,7 +50,7 @@ class TokenResponse(BaseModel):
 
 
 class UserInfo(BaseModel):
-    id: Optional[Union[str, UUID]] = None
+    id: Optional[Union[str, uuid.UUID]] = None
     given_name: Optional[str] = None
     family_name: Optional[str] = None
     email: Optional[str] = None
@@ -169,3 +169,27 @@ class QueryIdentityByEmail(BaseModel):
 class Auth:
     user: UserInfo
     response: Response
+
+
+class ConfirmUserEmailRequest(BaseModelSchema):
+    token: str
+
+
+class CreateUserRequest(BaseModelSchema):
+    first_name: str
+    last_name: str
+    email: str
+    password: str
+
+    _host_url: Optional[str] = None
+
+    def to_entity(self, hashed_password: str) -> User:
+        return User(
+            first_name=self.first_name,
+            last_name=self.last_name,
+            email=self.email,
+            subject=str(uuid.uuid4()),
+            idp="local",
+            password=hashed_password,
+            is_email_confirmed=False,
+        )

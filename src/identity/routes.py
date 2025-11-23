@@ -18,6 +18,8 @@ from src.identity.dependencies import (
 )
 from src.identity.helpers import parse_apple_id_token
 from src.identity.schemas import (
+    ConfirmUserEmailRequest,
+    CreateUserRequest,
     DeleteProfile,
     QueryIdentityByEmail,
     SigninCallbackRequest,
@@ -31,6 +33,8 @@ from src.identity.schemas import (
 from src.identity.services import (
     IdentityProvider,
     IdentityService,
+    confirm_email,
+    create_user,
     delete_user,
     get_or_create_user,
     get_user,
@@ -222,3 +226,35 @@ async def delete_user_google(
 
     await delete_user(session, info.data)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@api.post("/register", response_model=Result[None, None])
+async def create_user_route(
+    request: CreateUserRequest,
+    base_request: Request,
+    session: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    request._host_url = base_request.base_url
+
+    result = await create_user(session, settings, request)
+
+    if not result.succeeded:
+        return bad_request(result)
+
+    return ok(result)
+
+
+@api.get("/confirm", response_model=Result[None, None])
+async def create_user_route(
+    request: ConfirmUserEmailRequest = Depends(),
+    session: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+
+    result = await confirm_email(session, settings, request)
+
+    if not result.succeeded:
+        return bad_request(result)
+
+    return ok(result)

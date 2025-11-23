@@ -1,21 +1,26 @@
 import asyncio
 import base64
 import logging
+import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import jwt
 import requests
-from sqlalchemy import delete, select
+from passlib.context import CryptContext
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common import email
 from src.config import GoogleSigninSettings, Settings
 from src.constants import AssertionErrorMessage, ErrorCode, ErrorMessage
 from src.exceptions import UnauthorizedException
 from src.identity.models import User
 from src.identity.schemas import (
     AuthorizationCodeRequest,
+    ConfirmUserEmailRequest,
+    CreateUserRequest,
     DiscoveryDocument,
     PeopleBirthdayData,
     PeopleGenderInfo,
@@ -24,7 +29,6 @@ from src.identity.schemas import (
     UserInfo,
 )
 from src.models import Result
-
 
 logger = logging.getLogger(__name__)
 
@@ -743,3 +747,93 @@ async def delete_user(session: AsyncSession, info: UserInfo) -> None:
     await session.execute(delete(User).where(User.email == info.email))
 
     await session.commit()
+
+
+async def send_confirmation_email(
+    settings: Settings,
+    request: CreateUserRequest,
+    user_id: uuid.UUID,
+) -> Result[None, None]:
+    iat = datetime.now(timezone.utc)
+    payload: dict = {
+        "iat": iat,
+        "exp": iat + timedelta(hours=settings.confirm_email_token_lifetime),
+        "sub": str(user_id),
+    }
+
+    token = jwt.encode(
+        payload,
+        settings.confirm_email_token_secret,
+        algorithm=settings.confirm_email_token_algorithm,
+    )
+
+    content = f"""
+    <p style="font-family: Arial, sans-serif; font-size:14px; color:#333;">
+      Hi {request.first_name} {request.last_name} ,<br>please confirm your email address to complete your registration.<br>
+      Click the link below to verify your account:
+      <br><br>
+      <a href="{request._host_url}api/identity/confirm?token={token}" style="color:#1a73e8;">Confirm Email</a>
+    </p>
+    """
+
+    await email.send(settings, content, request.email, "Confirm your email")
+
+    return Result[None, None].success()
+
+
+async def create_user(
+    session: AsyncSession, settings: Settings, request: CreateUserRequest
+) -> Result[None, None]:
+    existing = await get_user(session, UserInfo(email=request.email))
+
+    if existing.succeeded:
+        return Result[None, None].failed(
+            "ERR_USER_ALREADY_EXISTS", "User already exists!"
+        )
+
+    context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    password = context.hash(request.password)
+
+    entity = request.to_entity(password)
+
+    session.add(entity)
+
+    await session.commit()
+
+    await send_confirmation_email(settings, request, entity.id)
+
+    return Result[None, None].success()
+
+
+async def confirm_email(
+    session: AsyncSession, settings: Settings, request: ConfirmUserEmailRequest
+) -> Result[None, None]:
+    try:
+        payload: dict = jwt.decode(
+            request.token,
+            settings.confirm_email_token_secret,
+            algorithms=[settings.confirm_email_token_algorithm],
+        )
+
+        sub = uuid.UUID(payload.get("sub"))
+
+        if not sub:
+            return Result[None, None].failed("ERR_EMAIL_CONFIRM_INVALID_SUB")
+
+        user = await get_user(session, UserInfo(id=sub))
+        if not user.succeeded:
+            return Result[None, None].failed_list(user.errors)
+
+        await session.execute(
+            update(User).where(User.id == sub).values(is_email_confirmed=True)
+        )
+
+        await session.commit()
+
+        return Result[None, None].success()
+    except Exception as ex:
+        logger.error(ex)
+        return Result[None, None].failed(
+            "ERR_EMAIL_CONFIRM_INVALID_TOKEN", "Provided token isn't valid!"
+        )

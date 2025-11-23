@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 model_config = SettingsConfigDict(env_file=".env", env_nested_delimiter="__")
 
 
@@ -31,13 +30,17 @@ class Settings(BaseSettings):
 
     postgress_connection_string: str
 
-    access_token_lifetime: int
+    access_token_lifetime: int  # seconds
     access_token_secret: str
     access_token_algorithm: str
 
-    refresh_token_lifetime: int
+    refresh_token_lifetime: int  # seconds
     refresh_token_secret: str
     refresh_token_algorithm: str
+
+    confirm_email_token_lifetime: int  # hours
+    confirm_email_token_secret: str
+    confirm_email_token_algorithm: str
 
     environment: str
 
