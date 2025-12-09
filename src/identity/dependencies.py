@@ -1,10 +1,9 @@
 from typing import Annotated
 
 from fastapi import Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from src.config import Settings
-from src.dependencies import get_settings
+from src.common.models import Result
 from src.identity.schemas import UserInfo
 from src.identity.services import (
     AppleIdentityProviderService,
@@ -12,9 +11,10 @@ from src.identity.services import (
     IdentityProvider,
     IdentityService,
 )
-from src.models import Result
+from src.settings.dependencies import get_settings
+from src.settings.models import Settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+auth_scheme = HTTPBearer()
 
 
 async def get_google_identity_provider_service(
@@ -49,8 +49,8 @@ def get_identity_service(
 
 
 def is_authenticated(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    bearer: Annotated[HTTPAuthorizationCredentials, Depends(auth_scheme)],
     identity_service: IdentityService = Depends(get_identity_service),
 ) -> Result[UserInfo, None]:
     """DI for checking if the token issued is valid, the token has to be issued by our backend server"""
-    return identity_service.is_authenticated(token)
+    return identity_service.is_authenticated(bearer.credentials)

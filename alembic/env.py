@@ -1,19 +1,25 @@
 import asyncio
+import importlib
+import pkgutil
 from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import src
 from alembic import context
-from src.config import settings
-from src.identity import __models__
-from src.models import Base
-
+from src.database.models import Base
+from src.settings.dependencies import get_settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+settings = get_settings()
+
+for module in pkgutil.walk_packages(src.__path__, prefix="src."):
+    if "models" in module.name:
+        importlib.import_module(module.name)
 
 config.set_main_option("sqlalchemy.url", settings.postgress_connection_string)
 # Interpret the config file for Python logging.

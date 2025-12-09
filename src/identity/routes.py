@@ -1,32 +1,30 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Request, Response, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.common.models import Result
 from src.common.response import bad_request, ok, unauthorized
-from src.config import Settings
 from src.constants import AssertionErrorMessage
-from src.dependencies import get_db, get_settings
+from src.database.dependencies import get_db
 from src.identity.dependencies import (
+    auth_scheme,
     get_apple_identity_provider_service,
     get_google_identity_provider_service,
     get_identity_service,
     is_authenticated,
-    oauth2_scheme,
 )
 from src.identity.helpers import parse_apple_id_token
 from src.identity.schemas import (
     ConfirmUserEmailRequest,
     CreateUserRequest,
     DeleteProfile,
-    QueryIdentityByEmail,
     SigninCallbackRequest,
     SigninRedirectRequest,
     SigninWithAppleHeader,
     SigninWithAppleRequest,
-    SigninWithAppleRequestWeb,
     TokenResponse,
     UserInfo,
 )
@@ -39,21 +37,18 @@ from src.identity.services import (
     get_or_create_user,
     get_user,
 )
-from src.models import Result
+from src.settings.dependencies import get_settings
+from src.settings.models import Settings
 
 api = APIRouter(prefix="/identity", tags=["identity"])
-web = APIRouter(prefix="/identity", tags=["web-identity"])
 
 logger = logging.getLogger(__name__)
 
 
-def get_refresh_token(request: Request) -> Result[str, None]:
-    cookies = request.cookies
-    assert cookies is not None, AssertionErrorMessage.INVALID_TOKEN
+def get_refresh_token(refresh_token: str = Cookie(...)) -> Result[str, None]:
+    assert refresh_token is not None, AssertionErrorMessage.INVALID_TOKEN
 
-    assert cookies.get("refresh_token") is not None, AssertionErrorMessage.INVALID_TOKEN
-
-    return cookies.get("refresh_token")
+    return refresh_token
 
 
 @api.post(
@@ -74,9 +69,9 @@ async def signin_redirect(
 @api.get("/signin/redirect/callback/deeplink")
 async def google_signin_callback_deeplink(code: str):
     assert code is not None, AssertionErrorMessage.invalid_property("code")
-    logger.info(f"Authorization Code: {code}")
+    logger.debug(f"Authorization Code: {code}")
 
-    return RedirectResponse(f"billastiq://callback?code={code}")
+    return RedirectResponse(f"template://callback?code={code}")
 
 
 @api.get("/signin/redirect/callback")
@@ -96,12 +91,11 @@ async def signin_redirect_callback_route(
         )
 
     user_info = await identity_provider.get_user_info(callback.data)
+
     if not user_info.succeeded:
         return bad_request(
             Result[TokenResponse, None].failed_list(user_info.errors),
         )
-
-    user_info.data.idp = "google"
 
     result = await get_or_create_user(session, user_info.data)
     if not result.succeeded:
@@ -158,7 +152,7 @@ async def signin_redirect_callback_apple(
     description="In the Authorization header provide us with your access_token recieved from our server [**Authorization Bearer <access_token>]** and in the cookie header provide us the refresh token **[Cookie: refresh_token=<refresh_token>]**",
 )
 async def refresh_token(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    token: Annotated[str, Depends(auth_scheme)],
     refresh_token: str = Depends(get_refresh_token),
     session: AsyncSession = Depends(get_db),
     identity_service: IdentityService = Depends(get_identity_service),
@@ -246,7 +240,7 @@ async def create_user_route(
 
 
 @api.get("/confirm", response_model=Result[None, None])
-async def create_user_route(
+async def confirm_email_route(
     request: ConfirmUserEmailRequest = Depends(),
     session: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),

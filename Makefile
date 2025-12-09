@@ -7,7 +7,10 @@ run-dev:
 run-prod:
 	uv run uvicorn src.main:app --host 0.0.0.0 --port 80 --proxy-headers --forwarded-allow-ips='*' --log-config=./logging/log_prod_conf.yml
 
-migration-add:
+compose-up:
+	docker compose -f compose/debug/docker-compose.yml down && docker compose -f compose/debug/docker-compose.yml up --build
+
+add-migration:
 	uv run alembic revision --autogenerate -m "$(name)"
 
 database-upgrade:

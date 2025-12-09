@@ -4,7 +4,7 @@ from fastapi import status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from src.models import Result
+from src.common.models import Result
 
 
 def ok(result: Result[Any, Any]):

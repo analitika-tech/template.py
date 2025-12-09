@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.models import Base
+from src.database.models import Base
 
 
 class User(Base):
@@ -20,8 +20,12 @@ class User(Base):
     gender: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     subject: Mapped[Optional[str]] = mapped_column(String, nullable=False)
     idp: Mapped[str] = mapped_column(String, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     def __full_name__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
+    def __str__(self) -> str:
         return f"{self.first_name} {self.last_name}"
 
     @staticmethod

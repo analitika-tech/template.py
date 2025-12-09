@@ -59,6 +59,3 @@ class Settings(BaseSettings):
     s3: S3
 
     model_config = model_config
-
-
-settings = Settings()

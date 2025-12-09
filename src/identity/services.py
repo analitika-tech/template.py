@@ -13,9 +13,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common import email
-from src.config import GoogleSigninSettings, Settings
+from src.common.exceptions import UnauthorizedException
+from src.common.models import Result
 from src.constants import AssertionErrorMessage, ErrorCode, ErrorMessage
-from src.exceptions import UnauthorizedException
 from src.identity.models import User
 from src.identity.schemas import (
     AuthorizationCodeRequest,
@@ -28,7 +28,7 @@ from src.identity.schemas import (
     TokenResponse,
     UserInfo,
 )
-from src.models import Result
+from src.settings.models import GoogleSigninSettings, Settings
 
 logger = logging.getLogger(__name__)
 
@@ -203,65 +203,6 @@ class AppleIdentityProviderService(IdentityProvider):
             return Result[bool, None].failed(
                 ErrorCode.INVALID_TOKEN, ErrorMessage.INVALID_TOKEN
             )
-
-    async def revoke(self, code: str, id: str) -> Result[bool, None]:
-        iat = datetime.now(timezone.utc)
-        exp = iat + timedelta(seconds=5 * 60)
-
-        payload = {
-            "iss": self._settings.apple_team_id,
-            "aud": "https://appleid.apple.com",
-            "sub": self._settings.apple_client_id,
-            "iat": iat,
-            "exp": exp,
-        }
-
-        headers = {"algorithm": "ES256", "kid": self._settings.apple_key_id}
-
-        token = jwt.encode(
-            payload,
-            base64.b64decode(self._settings.apple_login_cert_base64).decode("utf-8"),
-            algorithm="ES256",
-            headers=headers,
-        )
-
-        code_validation_request = await asyncio.to_thread(
-            requests.post,
-            self._document.token_endpoint,
-            data={
-                "client_id": self._settings.apple_client_id,
-                "client_secret": token,
-                "code": code,
-                "grant_type": "authorization_code",
-            },
-        )
-
-        if code_validation_request.status_code != 200:
-            return Result[bool, None].failed(
-                "InvalidCredentials",
-                "Token revocation failed due to invalid credentials",
-            )
-
-        token_response = TokenResponse(**code_validation_request.json())
-
-        revoke = await asyncio.to_thread(
-            requests.post,
-            self._settings.apple_revoke_uri,
-            data={
-                "client_id": self._settings.apple_client_id,
-                "client_secret": token,
-                "token": token_response.access_token,
-            },
-            headers={"Content-type": "application/x-www-form-urlencoded"},
-        )
-
-        if revoke.status_code != 200:
-            return Result[bool, None].failed(
-                "InvalidCredentials",
-                "Token revocation failed due to invalid credentials",
-            )
-
-        return Result[bool, None].success()
 
     async def revoke(self, code: str, id: str) -> Result[bool, None]:
         iat = datetime.now(timezone.utc)

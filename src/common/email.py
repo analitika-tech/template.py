@@ -3,7 +3,7 @@ import logging
 import smtplib
 from email.mime.text import MIMEText
 
-from src.config import Settings
+from src.settings.models import Settings
 
 logger = logging.getLogger()
 

@@ -6,8 +6,8 @@ from typing import Optional, Union
 from fastapi import Response
 from pydantic import BaseModel
 
+from src.common.schemas import BaseModelSchema
 from src.identity.models import User
-from src.schemas import BaseModelSchema
 
 
 class DeleteProfile(BaseModel):
