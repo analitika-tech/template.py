@@ -20,7 +20,9 @@ class UnauthorizedException(Exception):
         self.result = result
 
 
-async def unauthorized_exception_handler(_: Request, ex: UnauthorizedException):
+async def unauthorized_exception_handler(
+    _: Request, ex: UnauthorizedException
+):
     """Throwing HTTP Unauthorized exceptions where the token validation fails"""
     logger.error("User not authorized to get access to the resource")
     return JSONResponse(
@@ -58,5 +60,7 @@ async def assertion_exception_handler(_: Request, ex: AssertionError):
 
 def register_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AssertionError, assertion_exception_handler)
-    app.add_exception_handler(UnauthorizedException, unauthorized_exception_handler)
+    app.add_exception_handler(
+        UnauthorizedException, unauthorized_exception_handler
+    )
     app.add_exception_handler(Exception, global_exception_handler)

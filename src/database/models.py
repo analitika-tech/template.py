@@ -10,8 +10,10 @@ class Base(DeclarativeBase):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.datetime.now(datetime.timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.datetime.now(datetime.timezone.utc),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.datetime.now(datetime.timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.datetime.now(datetime.timezone.utc),
     )

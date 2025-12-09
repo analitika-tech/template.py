@@ -12,11 +12,17 @@ class User(Base):
 
     first_name: Mapped[str] = mapped_column(String, nullable=False)
     last_name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, index=True, unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String, index=True, unique=True, nullable=False
+    )
     password: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    is_email_confirmed: Mapped[bool] = mapped_column(Boolean(create_constraint=False))
+    is_email_confirmed: Mapped[bool] = mapped_column(
+        Boolean(create_constraint=False)
+    )
     picture: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    birthday: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    birthday: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
     gender: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     subject: Mapped[Optional[str]] = mapped_column(String, nullable=False)
     idp: Mapped[str] = mapped_column(String, nullable=False)

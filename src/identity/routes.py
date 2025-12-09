@@ -57,13 +57,19 @@ def get_refresh_token(refresh_token: str = Cookie(...)) -> Result[str, None]:
 )
 async def signin_redirect(
     request: SigninRedirectRequest,
-    identity_provider: IdentityProvider = Depends(get_google_identity_provider_service),
+    identity_provider: IdentityProvider = Depends(
+        get_google_identity_provider_service
+    ),
 ):
     assert (
         request.id is not None and len(request.id.strip()) > 1
     ), AssertionErrorMessage.invalid_property("request.id")
 
-    return ok(Result[str, None].success(identity_provider.signin_redirect(request.id)))
+    return ok(
+        Result[str, None].success(
+            identity_provider.signin_redirect(request.id)
+        )
+    )
 
 
 @api.get("/signin/redirect/callback/deeplink")
@@ -77,7 +83,9 @@ async def google_signin_callback_deeplink(code: str):
 @api.get("/signin/redirect/callback")
 async def signin_redirect_callback_route(
     request: SigninCallbackRequest = Depends(),
-    identity_provider: IdentityProvider = Depends(get_google_identity_provider_service),
+    identity_provider: IdentityProvider = Depends(
+        get_google_identity_provider_service
+    ),
     session: AsyncSession = Depends(get_db),
     identity_service: IdentityService = Depends(get_identity_service),
     settings: Settings = Depends(get_settings),
@@ -99,12 +107,16 @@ async def signin_redirect_callback_route(
 
     result = await get_or_create_user(session, user_info.data)
     if not result.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(result.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(result.errors)
+        )
 
     token_result = identity_service.authenticate(result.data)
 
     if not token_result.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(token_result.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(token_result.errors)
+        )
 
     return ok(token_result)
 
@@ -113,20 +125,26 @@ async def signin_redirect_callback_route(
 async def signin_redirect_callback_apple(
     request: SigninWithAppleRequest,
     header: SigninWithAppleHeader = Depends(parse_apple_id_token),
-    identity_provider: IdentityProvider = Depends(get_apple_identity_provider_service),
+    identity_provider: IdentityProvider = Depends(
+        get_apple_identity_provider_service
+    ),
     session: AsyncSession = Depends(get_db),
     identity_service: IdentityService = Depends(get_identity_service),
 ):
     validation = await identity_provider.validate_id_token(header.id_token)
     if not validation.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(validation.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(validation.errors)
+        )
 
     user_info = await identity_provider.get_user_info(
         TokenResponse(id_token=header.id_token)
     )
 
     if not user_info.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(user_info.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(user_info.errors)
+        )
 
     user_info.data.given_name = request.given_name
     user_info.data.family_name = request.family_name
@@ -136,12 +154,16 @@ async def signin_redirect_callback_apple(
 
     result = await get_or_create_user(session, user_info.data)
     if not result.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(result.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(result.errors)
+        )
 
     token_result = identity_service.authenticate(result.data)
 
     if not token_result.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(token_result.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(token_result.errors)
+        )
 
     return ok(token_result)
 
@@ -175,11 +197,15 @@ async def refresh_token(
 
     user_result = await get_user(session, validation_result.data)
     if not user_result.succeeded:
-        return unauthorized(Result[TokenResponse, None].failed_list(user_result.errors))
+        return unauthorized(
+            Result[TokenResponse, None].failed_list(user_result.errors)
+        )
 
     result = identity_service.authenticate(user_result.data)
     if not result.succeeded:
-        return bad_request(Result[TokenResponse, None].failed_list(result.errors))
+        return bad_request(
+            Result[TokenResponse, None].failed_list(result.errors)
+        )
 
     return ok(result)
 
@@ -200,7 +226,9 @@ async def get_user_info(
 async def delete_user_apple(
     request: DeleteProfile,
     info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
-    identity_provider: IdentityProvider = Depends(get_apple_identity_provider_service),
+    identity_provider: IdentityProvider = Depends(
+        get_apple_identity_provider_service
+    ),
     session: AsyncSession = Depends(get_db),
 ):
     await identity_provider.revoke(request.code, "")
@@ -213,7 +241,9 @@ async def delete_user_apple(
 async def delete_user_google(
     request: DeleteProfile,
     info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
-    identity_provider: IdentityProvider = Depends(get_google_identity_provider_service),
+    identity_provider: IdentityProvider = Depends(
+        get_google_identity_provider_service
+    ),
     session: AsyncSession = Depends(get_db),
 ):
     await identity_provider.revoke(request.code, request.id)

@@ -40,11 +40,15 @@ class IdentityProvider(ABC):
         pass
 
     @abstractmethod
-    async def signin_callback(self, code: str, id: str) -> Result[TokenResponse, None]:
+    async def signin_callback(
+        self, code: str, id: str
+    ) -> Result[TokenResponse, None]:
         pass
 
     @abstractmethod
-    async def get_user_info(self, token: TokenResponse) -> Result[UserInfo, None]:
+    async def get_user_info(
+        self, token: TokenResponse
+    ) -> Result[UserInfo, None]:
         pass
 
     @abstractmethod
@@ -83,7 +87,9 @@ class IdentityModel:
     async def get_user_info(
         token: str, document: DiscoveryDocument
     ) -> Result[UserInfo, None]:
-        assert document is not None, AssertionErrorMessage.INVALID_DISCOVERY_DOCUMENT
+        assert (
+            document is not None
+        ), AssertionErrorMessage.INVALID_DISCOVERY_DOCUMENT
 
         result = await asyncio.to_thread(
             requests.get,
@@ -117,17 +123,23 @@ class IdentityModel:
         )
 
         if result.status_code != 200:
-            logger.error(f"Token couldn't be acquired and with response: {result.text}")
+            logger.error(
+                f"Token couldn't be acquired and with response: {result.text}"
+            )
             return Result[TokenResponse, None].failed(
                 ErrorCode.INVALID_TOKEN,
                 ErrorMessage.INVALID_TOKEN,
             )
 
-        return Result[TokenResponse, None].success(TokenResponse(**result.json()))
+        return Result[TokenResponse, None].success(
+            TokenResponse(**result.json())
+        )
 
 
 class AppleIdentityProviderService(IdentityProvider):
-    def __init__(self, settings: Settings, document: DiscoveryDocument) -> None:
+    def __init__(
+        self, settings: Settings, document: DiscoveryDocument
+    ) -> None:
         """
         For apple login verification will be using only validate_id_token\n
         discovery document will only have the jwks uri because apple has specific way of OAuth2
@@ -144,10 +156,14 @@ class AppleIdentityProviderService(IdentityProvider):
     def signin_redirect(self, id: str) -> str:
         raise NotImplementedError()
 
-    async def signin_callback(self, code: str, id: str) -> Result[TokenResponse, None]:
+    async def signin_callback(
+        self, code: str, id: str
+    ) -> Result[TokenResponse, None]:
         raise NotImplementedError()
 
-    async def get_user_info(self, token: TokenResponse) -> Result[UserInfo, None]:
+    async def get_user_info(
+        self, token: TokenResponse
+    ) -> Result[UserInfo, None]:
         assert (
             token.id_token is not None
         ), AssertionErrorMessage.INVALID_EXTERNAL_ACCESS_TOKEN
@@ -159,9 +175,13 @@ class AppleIdentityProviderService(IdentityProvider):
         header = jwt.get_unverified_header(token.id_token)
 
         assert header is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
-        assert header["kid"] is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
+        assert (
+            header["kid"] is not None
+        ), AssertionErrorMessage.INVALID_TOKEN_HADER
 
-        key_result = await asyncio.to_thread(jwks_client.get_signing_key, header["kid"])
+        key_result = await asyncio.to_thread(
+            jwks_client.get_signing_key, header["kid"]
+        )
 
         decoded = jwt.decode(
             token.id_token,
@@ -183,8 +203,12 @@ class AppleIdentityProviderService(IdentityProvider):
             jwks_client = jwt.PyJWKClient(self._document.jwks_uri)
             header = jwt.get_unverified_header(token)
 
-            assert header is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
-            assert header["kid"] is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
+            assert (
+                header is not None
+            ), AssertionErrorMessage.INVALID_TOKEN_HADER
+            assert (
+                header["kid"] is not None
+            ), AssertionErrorMessage.INVALID_TOKEN_HADER
 
             key_result = await asyncio.to_thread(
                 jwks_client.get_signing_key, header["kid"]
@@ -220,7 +244,9 @@ class AppleIdentityProviderService(IdentityProvider):
 
         token = jwt.encode(
             payload,
-            base64.b64decode(self._settings.apple_login_cert_base64).decode("utf-8"),
+            base64.b64decode(self._settings.apple_login_cert_base64).decode(
+                "utf-8"
+            ),
             algorithm="ES256",
             headers=headers,
         )
@@ -265,7 +291,9 @@ class AppleIdentityProviderService(IdentityProvider):
 
 
 class GoogleIdentityProviderService(IdentityProvider):
-    def __init__(self, settings: Settings, document: DiscoveryDocument) -> None:
+    def __init__(
+        self, settings: Settings, document: DiscoveryDocument
+    ) -> None:
         self._settings = settings
         self._document = document
 
@@ -291,17 +319,21 @@ class GoogleIdentityProviderService(IdentityProvider):
         - https://www.googleapis.com/auth/user.gender.read - apple denies use if no user benefit
         """
 
-        assert id is not None and len(id) > 0, AssertionErrorMessage.invalid_property(
-            "request.id"
-        )
+        assert (
+            id is not None and len(id) > 0
+        ), AssertionErrorMessage.invalid_property("request.id")
 
         client = self._filter_clients(id)
 
-        assert client is not None, AssertionErrorMessage.entity_not_found("Client")
+        assert client is not None, AssertionErrorMessage.entity_not_found(
+            "Client"
+        )
 
         return f"{self._document.authorization_endpoint}?response_type=code&client_id={client.client_id}&redirect_uri={client.redirect_uri}&scope=openid%20profile%20email&aacess_type=offline"
 
-    async def signin_callback(self, code: str, id: str) -> Result[TokenResponse, None]:
+    async def signin_callback(
+        self, code: str, id: str
+    ) -> Result[TokenResponse, None]:
         assert code is not None
 
         client = self._filter_clients(id)
@@ -328,7 +360,9 @@ class GoogleIdentityProviderService(IdentityProvider):
 
         return result
 
-    async def get_user_info(self, token: TokenResponse) -> Result[UserInfo, None]:
+    async def get_user_info(
+        self, token: TokenResponse
+    ) -> Result[UserInfo, None]:
         assert (
             token.access_token is not None
         ), AssertionErrorMessage.INVALID_EXTERNAL_ACCESS_TOKEN
@@ -358,8 +392,12 @@ class GoogleIdentityProviderService(IdentityProvider):
             jwks_client = jwt.PyJWKClient(self._document.jwks_uri)
             header = jwt.get_unverified_header(token.id_token)
 
-            assert header is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
-            assert header["kid"] is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
+            assert (
+                header is not None
+            ), AssertionErrorMessage.INVALID_TOKEN_HADER
+            assert (
+                header["kid"] is not None
+            ), AssertionErrorMessage.INVALID_TOKEN_HADER
 
             key_result = await asyncio.to_thread(
                 jwks_client.get_signing_key, header["kid"]
@@ -396,8 +434,12 @@ class GoogleIdentityProviderService(IdentityProvider):
             jwks_client = jwt.PyJWKClient(self._document.jwks_uri)
             header = jwt.get_unverified_header(token)
 
-            assert header is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
-            assert header["kid"] is not None, AssertionErrorMessage.INVALID_TOKEN_HADER
+            assert (
+                header is not None
+            ), AssertionErrorMessage.INVALID_TOKEN_HADER
+            assert (
+                header["kid"] is not None
+            ), AssertionErrorMessage.INVALID_TOKEN_HADER
 
             key_result = await asyncio.to_thread(
                 jwks_client.get_signing_key, header["kid"]
@@ -424,7 +466,9 @@ class GoogleIdentityProviderService(IdentityProvider):
         if not token.succeeded:
             return Result[bool, None].failed_list(token.errors)
 
-        assert token.data.access_token is not None, AssertionErrorMessage.INVALID_TOKEN
+        assert (
+            token.data.access_token is not None
+        ), AssertionErrorMessage.INVALID_TOKEN
 
         result = await asyncio.to_thread(
             requests.post,
@@ -433,7 +477,9 @@ class GoogleIdentityProviderService(IdentityProvider):
         )
 
         if result.status_code != 200:
-            return Result[bool, None].failed("RevocationError", "User data not valid")
+            return Result[bool, None].failed(
+                "RevocationError", "User data not valid"
+            )
 
         return Result[bool, None].success()
 
@@ -526,9 +572,10 @@ class IdentityService:
             and len(self._settings.access_token_secret) > 0
         ), AssertionErrorMessage.INVALID_TOKEN_SECRET
 
-        assert self._settings.access_token_algorithm is not None and isinstance(
-            self._settings.access_token_algorithm, str
-        ), AssertionErrorMessage.INVALID_ALGORITHM
+        assert (
+            self._settings.access_token_algorithm is not None
+            and isinstance(self._settings.access_token_algorithm, str)
+        ), (AssertionErrorMessage.INVALID_ALGORITHM)
 
         to_encode = User.to_dict(user)
 
@@ -559,9 +606,10 @@ class IdentityService:
             and len(self._settings.refresh_token_secret) > 0
         ), AssertionErrorMessage.INVALID_TOKEN_SECRET
 
-        assert self._settings.refresh_token_algorithm is not None and isinstance(
-            self._settings.refresh_token_algorithm, str
-        ), AssertionErrorMessage.INVALID_ALGORITHM
+        assert (
+            self._settings.refresh_token_algorithm is not None
+            and isinstance(self._settings.refresh_token_algorithm, str)
+        ), (AssertionErrorMessage.INVALID_ALGORITHM)
 
         to_encode = User.to_dict(user)
 
@@ -602,7 +650,9 @@ class IdentityService:
             return Result[UserInfo, None].success(info)
         except Exception as ex:
             raise UnauthorizedException(
-                result=Result[UserInfo, None].failed(ErrorCode.INVALID_TOKEN, str(ex))
+                result=Result[UserInfo, None].failed(
+                    ErrorCode.INVALID_TOKEN, str(ex)
+                )
             )
 
     def is_access_token_valid(self, token: str) -> bool:
@@ -620,9 +670,13 @@ class IdentityService:
                 algorithms=[self._settings.refresh_token_algorithm],
             )
 
-            assert payload.get("email") is not None, AssertionErrorMessage.INVALID_TOKEN
+            assert (
+                payload.get("email") is not None
+            ), AssertionErrorMessage.INVALID_TOKEN
 
-            return Result[UserInfo, None].success(UserInfo(email=payload.get("email")))
+            return Result[UserInfo, None].success(
+                UserInfo(email=payload.get("email"))
+            )
         except Exception as ex:
             logger.error(ex)
             raise UnauthorizedException(
@@ -630,7 +684,9 @@ class IdentityService:
             )
 
 
-async def get_user(session: AsyncSession, info: UserInfo) -> Result[User, None]:
+async def get_user(
+    session: AsyncSession, info: UserInfo
+) -> Result[User, None]:
 
     query = select(User)
     if info.email is not None:
@@ -660,16 +716,18 @@ async def get_or_create_user(
         if find_user.succeeded:
             return find_user
 
-        assert info.email is not None, AssertionErrorMessage.invalid_property("email")
-        assert info.given_name is not None, AssertionErrorMessage.invalid_property(
-            "given_name"
+        assert info.email is not None, AssertionErrorMessage.invalid_property(
+            "email"
         )
-        assert info.family_name is not None, AssertionErrorMessage.invalid_property(
-            "family_name"
-        )
-        assert info.email_verified is not None, AssertionErrorMessage.invalid_property(
-            "email_verified"
-        )
+        assert (
+            info.given_name is not None
+        ), AssertionErrorMessage.invalid_property("given_name")
+        assert (
+            info.family_name is not None
+        ), AssertionErrorMessage.invalid_property("family_name")
+        assert (
+            info.email_verified is not None
+        ), AssertionErrorMessage.invalid_property("email_verified")
         user = UserInfo.to_entity(info)
 
         session.add(user)

@@ -22,7 +22,9 @@ async def get_google_identity_provider_service(
 ) -> IdentityProvider:
     from src.identity.services import IdentityModel
 
-    document = await IdentityModel.get_discovery_document(settings.google_mobile.idp)
+    document = await IdentityModel.get_discovery_document(
+        settings.google_mobile.idp
+    )
     return GoogleIdentityProviderService(settings, document.data)
 
 

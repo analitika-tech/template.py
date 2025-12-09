@@ -8,7 +8,9 @@ from src.settings.models import Settings
 logger = logging.getLogger()
 
 
-async def send(settings: Settings, content: str, to: str, subject: str) -> None:
+async def send(
+    settings: Settings, content: str, to: str, subject: str
+) -> None:
     """
     Sends an email asynchronously using the provided settings.
 
@@ -39,7 +41,9 @@ async def send(settings: Settings, content: str, to: str, subject: str) -> None:
 
         logger.info("[EMAIL]: Logging in to SMTP server")
         await asyncio.to_thread(
-            smtp.login, settings.email_settings.sender, settings.email_settings.password
+            smtp.login,
+            settings.email_settings.sender,
+            settings.email_settings.password,
         )
 
         logger.info("[EMAIL]: Sending email to recipient")

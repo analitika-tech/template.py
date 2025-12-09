@@ -20,7 +20,9 @@ class Result(Generic[TData, TInfo]):
 
     @staticmethod
     def success(result: Optional[TData] = None, info: Optional[TInfo] = None):
-        return Result[TData, TInfo](succeeded=True, data=result, errors=[], info=info)
+        return Result[TData, TInfo](
+            succeeded=True, data=result, errors=[], info=info
+        )
 
     @staticmethod
     def failed(code: str, description: str):
