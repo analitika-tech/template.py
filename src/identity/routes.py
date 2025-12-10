@@ -45,17 +45,11 @@ api = APIRouter(prefix="/identity", tags=["identity"])
 logger = logging.getLogger(__name__)
 
 
-def get_refresh_token(refresh_token: str = Cookie(...)) -> Result[str, None]:
-    assert refresh_token is not None, AssertionErrorMessage.INVALID_TOKEN
-
-    return refresh_token
-
-
 @api.post(
-    "/signin/redirect",
+    "/google/signin/redirect",
     response_model=Result[str, None],
 )
-async def signin_redirect(
+async def signin_redirect_route(
     request: SigninRedirectRequest,
     identity_provider: IdentityProvider = Depends(
         get_google_identity_provider_service
@@ -72,15 +66,15 @@ async def signin_redirect(
     )
 
 
-@api.get("/signin/redirect/callback/deeplink")
-async def google_signin_callback_deeplink(code: str):
+@api.get("/google/signin/redirect/callback/deeplink")
+async def google_signin_callback_deeplink_route(code: str):
     assert code is not None, AssertionErrorMessage.invalid_property("code")
     logger.debug(f"Authorization Code: {code}")
 
     return RedirectResponse(f"template://callback?code={code}")
 
 
-@api.get("/signin/redirect/callback")
+@api.get("/google/signin/redirect/callback")
 async def signin_redirect_callback_route(
     request: SigninCallbackRequest = Depends(),
     identity_provider: IdentityProvider = Depends(
@@ -121,8 +115,23 @@ async def signin_redirect_callback_route(
     return ok(token_result)
 
 
-@api.post("/signin/redirect/callback/apple")
-async def signin_redirect_callback_apple(
+@api.delete("/google/delete")
+async def delete_user_google_route(
+    request: DeleteProfile,
+    info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
+    identity_provider: IdentityProvider = Depends(
+        get_google_identity_provider_service
+    ),
+    session: AsyncSession = Depends(get_db),
+):
+    await identity_provider.revoke(request.code, request.id)
+
+    await delete_user(session, info.data)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@api.post("/apple/signin/redirect/callback")
+async def signin_redirect_callback_apple_route(
     request: SigninWithAppleRequest,
     header: SigninWithAppleHeader = Depends(parse_apple_id_token),
     identity_provider: IdentityProvider = Depends(
@@ -168,14 +177,29 @@ async def signin_redirect_callback_apple(
     return ok(token_result)
 
 
+@api.delete("/apple/delete")
+async def delete_user_apple_route(
+    request: DeleteProfile,
+    info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
+    identity_provider: IdentityProvider = Depends(
+        get_apple_identity_provider_service
+    ),
+    session: AsyncSession = Depends(get_db),
+):
+    await identity_provider.revoke(request.code, "")
+
+    await delete_user(session, info.data)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @api.post(
     "/token/refresh",
     response_model=Result[TokenResponse, None],
-    description="In the Authorization header provide us with your access_token recieved from our server [**Authorization Bearer <access_token>]** and in the cookie header provide us the refresh token **[Cookie: refresh_token=<refresh_token>]**",
+    description="This is a blue print how you should send these params, because the swagger docs use JS under the hood the **Cookie** params wont be sent but you can test out the functionality by copying the CURL request and executing it from CLI or Postman",
 )
-async def refresh_token(
+async def refresh_token_route(
     token: Annotated[str, Depends(auth_scheme)],
-    refresh_token: str = Depends(get_refresh_token),
+    refresh_token: Annotated[str | None, Cookie()] = None,
     session: AsyncSession = Depends(get_db),
     identity_service: IdentityService = Depends(get_identity_service),
     settings: Settings = Depends(get_settings),
@@ -210,8 +234,8 @@ async def refresh_token(
     return ok(result)
 
 
-@api.get("/userinfo")
-async def get_user_info(
+@api.get("/userinfo", response_model=Result[UserInfo, None])
+async def get_user_info_route(
     info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
     session: AsyncSession = Depends(get_db),
 ):
@@ -220,36 +244,6 @@ async def get_user_info(
         return bad_request(Result[UserInfo, None].failed_list(user.errors))
 
     return ok(Result[UserInfo, None].success(UserInfo.from_entity(user.data)))
-
-
-@api.delete("/apple/delete")
-async def delete_user_apple(
-    request: DeleteProfile,
-    info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
-    identity_provider: IdentityProvider = Depends(
-        get_apple_identity_provider_service
-    ),
-    session: AsyncSession = Depends(get_db),
-):
-    await identity_provider.revoke(request.code, "")
-
-    await delete_user(session, info.data)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@api.delete("/google/delete")
-async def delete_user_google(
-    request: DeleteProfile,
-    info: Annotated[Result[UserInfo, None], Depends(is_authenticated)],
-    identity_provider: IdentityProvider = Depends(
-        get_google_identity_provider_service
-    ),
-    session: AsyncSession = Depends(get_db),
-):
-    await identity_provider.revoke(request.code, request.id)
-
-    await delete_user(session, info.data)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @api.post("/register", response_model=Result[None, None])
