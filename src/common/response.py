@@ -4,7 +4,7 @@ from fastapi import status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from src.models import Result
+from src.common.models import Result
 
 
 def ok(result: Result[Any, Any]):
@@ -31,4 +31,6 @@ def to_response(status_code: int, result: Result[Any, Any]):
     """
     Returns a envoded json response from the result object
     """
-    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+    return JSONResponse(
+        status_code=status_code, content=jsonable_encoder(result)
+    )

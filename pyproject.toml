@@ -10,6 +10,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "fastapi>=0.115.11",
     "jinja2>=3.1.6",
+    "passlib>=1.7.4",
     "pydantic>=2.10.6",
     "pydantic-settings>=2.8.1",
     "pyjwt[crypto]>=2.10.1",
@@ -34,3 +35,5 @@ test = [
 [tool.pytest.ini_options]
 pythonpath = "src"
 
+[tool.black]
+line-length = 79

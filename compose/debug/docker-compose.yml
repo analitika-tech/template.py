@@ -8,6 +8,7 @@ services:
     ports:
       - 8000:80
     volumes:
+      - /code/.venv
       - ../../:/code/
 
   db:
@@ -21,9 +22,9 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - template_py_data:/var/lib/postgresql/data
 
 volumes: 
-  postgres_data:
+  template_py_data:
     driver: local
 

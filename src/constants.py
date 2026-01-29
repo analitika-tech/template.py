@@ -2,7 +2,9 @@ class AssertionErrorMessage:
     INVALID_TOKEN_LIFETIME = "Access Token Lifetime is null or incorrect"
     INVALID_TOKEN_SECRET = "Token Secret is null or incorrect"
     INVALID_TOKEN_LIFESPAN = "Token iat can't be greater than exp"
-    INVALID_EXTERNAL_ACCESS_TOKEN = "Access Token provided by client is not valid"
+    INVALID_EXTERNAL_ACCESS_TOKEN = (
+        "Access Token provided by client is not valid"
+    )
     INVALID_DISCOVERY_DOCUMENT = "Discovery document is empty or corrupted"
     INVALID_TOKEN_HADER = "Invalid Token Header"
     INVALID_ALGORITHM = "Algorithm is empty or it is not a valid algorithm"
@@ -11,9 +13,7 @@ class AssertionErrorMessage:
     INVALID_REQUEST = "Request not valid or malformed"
     INVALID_ACCESS_RIGHTS = "Nemata prava da podešavate budžet"
 
-    BUDGET_ARCHIVED = (
-        "Budget has been archived, no actions outside deletion can be performed"
-    )
+    BUDGET_ARCHIVED = "Budget has been archived, no actions outside deletion can be performed"
 
     @staticmethod
     def invalid_property(property: str) -> str:

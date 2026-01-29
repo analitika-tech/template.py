@@ -1,12 +1,11 @@
 import logging
-from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 
+from src.common.models import Error, Result
 from src.constants import ErrorCode, ErrorMessage
-from src.models import Error, Result
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,9 @@ class UnauthorizedException(Exception):
         self.result = result
 
 
-async def unauthorized_exception_handler(_: Request, ex: UnauthorizedException):
+async def unauthorized_exception_handler(
+    _: Request, ex: UnauthorizedException
+):
     """Throwing HTTP Unauthorized exceptions where the token validation fails"""
     logger.error("User not authorized to get access to the resource")
     return JSONResponse(
@@ -58,8 +59,8 @@ async def assertion_exception_handler(_: Request, ex: AssertionError):
 
 
 def register_handlers(app: FastAPI) -> None:
-    logger.info("Registering exception handlers")
-
     app.add_exception_handler(AssertionError, assertion_exception_handler)
-    app.add_exception_handler(UnauthorizedException, unauthorized_exception_handler)
+    app.add_exception_handler(
+        UnauthorizedException, unauthorized_exception_handler
+    )
     app.add_exception_handler(Exception, global_exception_handler)
